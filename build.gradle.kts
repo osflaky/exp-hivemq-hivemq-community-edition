@@ -1,0 +1,424 @@
+import com.github.jengelman.gradle.plugins.shadow.transformers.PreserveFirstFoundResourceTransformer
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
+plugins {
+    java
+    `java-library`
+    `maven-publish`
+    signing
+    alias(libs.plugins.mavenCentralPublishing)
+    alias(libs.plugins.shadow)
+    alias(libs.plugins.defaults)
+    alias(libs.plugins.metadata)
+    alias(libs.plugins.hivemq.oci.version.catalog)
+    alias(libs.plugins.oci)
+    alias(libs.plugins.javadocLinks)
+    alias(libs.plugins.githubRelease)
+
+    /* Code Quality Plugins */
+    jacoco
+    alias(libs.plugins.forbiddenApis)
+    alias(libs.plugins.spotless)
+
+    /* Compliance */
+    alias(libs.plugins.hivemq.license)
+}
+
+group = "com.hivemq"
+description = "HiveMQ CE is a Java-based open source MQTT broker that fully supports MQTT 3.x and MQTT 5"
+
+metadata {
+    readableName = "HiveMQ Community Edition"
+    organization {
+        name = "HiveMQ GmbH"
+        url = "https://www.hivemq.com/"
+    }
+    license {
+        apache2()
+    }
+    developers {
+        register("cschaebe") {
+            fullName = "Christoph Schaebel"
+            email = "christoph.schaebel@hivemq.com"
+        }
+        register("lbrandl") {
+            fullName = "Lukas Brandl"
+            email = "lukas.brandl@hivemq.com"
+        }
+        register("flimpoeck") {
+            fullName = "Florian Limpoeck"
+            email = "florian.limpoeck@hivemq.com"
+        }
+        register("sauroter") {
+            fullName = "Georg Held"
+            email = "georg.held@hivemq.com"
+        }
+        register("SgtSilvio") {
+            fullName = "Silvio Giebl"
+            email = "silvio.giebl@hivemq.com"
+        }
+    }
+    github {
+        issues()
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    withJavadocJar()
+    withSourcesJar()
+}
+
+tasks.compileJava {
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    api(libs.hivemq.extensionSdk)
+
+    // netty
+    implementation(libs.netty.buffer)
+    implementation(libs.netty.codec)
+    implementation(libs.netty.codec.http)
+    implementation(libs.netty.common)
+    implementation(libs.netty.handler)
+    implementation(libs.netty.transport)
+
+    // logging
+    implementation(libs.slf4j.api)
+    implementation(libs.julToSlf4j)
+    implementation(libs.logback.classic)
+
+    // security
+    implementation(platform(libs.bouncycastle.bom))
+    implementation(libs.bouncycastle.prov)
+    implementation(libs.bouncycastle.pkix)
+
+    // persistence
+    implementation(libs.rocksdb)
+    implementation(libs.xodus.openApi) {
+        exclude("org.jetbrains", "annotations")
+    }
+    implementation(libs.xodus.environment) {
+        exclude("org.jetbrains", "annotations")
+    }
+    // override transitive dependencies of xodus that have security vulnerabilities
+    constraints {
+        implementation(libs.kotlin.stdlib)
+        implementation(libs.apache.commonsCompress)
+    }
+
+    // config
+    implementation(libs.jaxb.api)
+    runtimeOnly(libs.jaxb.impl)
+
+    // metrics
+    api(libs.dropwizard.metrics)
+    implementation(libs.dropwizard.metrics.jmx)
+    runtimeOnly(libs.dropwizard.metrics.logback)
+    implementation(libs.oshi)
+    // net.java.dev.jna:jna (transitive dependency of com.github.oshi:oshi-core) is used in imports
+
+    // dependency injection
+    implementation(libs.guice) {
+        exclude("com.google.guava", "guava")
+    }
+    implementation(libs.javax.annotation.api)
+    // javax.inject:javax.inject (transitive dependency of com.google.inject:guice) is used in imports
+
+    // common
+    implementation(libs.apache.commonsIO)
+    implementation(libs.apache.commonsLang)
+    implementation(libs.guava) {
+        exclude("org.checkerframework", "checker-qual")
+        exclude("com.google.errorprone", "error_prone_annotations")
+    }
+    // com.google.code.findbugs:jsr305 (transitive dependency of com.google.guava:guava) is used in imports
+    implementation(libs.zeroAllocationHashing)
+    implementation(libs.jackson.databind)
+    implementation(libs.jctools)
+
+    /* primitive data structures */
+    implementation(libs.eclipse.collections)
+}
+
+/* ******************** test ******************** */
+
+dependencies {
+    testImplementation(libs.junit)
+    testImplementation(libs.mockito)
+    testImplementation(libs.equalsVerifier)
+    testImplementation(libs.concurrentUnit)
+    testImplementation(libs.shrinkwrap.api)
+    testRuntimeOnly(libs.shrinkwrap.impl)
+    testImplementation(libs.byteBuddy)
+    testImplementation(libs.wiremock.standalone)
+    testImplementation(libs.javassist)
+    testImplementation(libs.awaitility)
+    testImplementation(libs.systemStubs)
+}
+
+tasks.test {
+    minHeapSize = "128m"
+    maxHeapSize = "2048m"
+    jvmArgs(
+        "-Dfile.encoding=UTF-8",
+        "--add-opens",
+        "java.base/java.lang=ALL-UNNAMED",
+        "--add-opens",
+        "java.base/java.nio=ALL-UNNAMED",
+        "--add-opens",
+        "java.base/sun.nio.ch=ALL-UNNAMED",
+        "--add-opens",
+        "jdk.management/com.sun.management.internal=ALL-UNNAMED",
+        "--add-exports",
+        "java.base/jdk.internal.misc=ALL-UNNAMED",
+    )
+
+    val inclusions = rootDir.resolve("inclusions.txt")
+    val exclusions = rootDir.resolve("exclusions.txt")
+    if (inclusions.exists()) {
+        include(inclusions.readLines())
+    } else if (exclusions.exists()) {
+        exclude(exclusions.readLines())
+    }
+
+    testLogging {
+        events = setOf(TestLogEvent.STARTED, TestLogEvent.FAILED)
+    }
+}
+
+/* ******************** distribution ******************** */
+
+tasks.jar {
+    manifest.attributes(
+        "Implementation-Title" to "HiveMQ",
+        "Implementation-Vendor" to metadata.organization.get().name.get(),
+        "Implementation-Version" to project.version,
+        "HiveMQ-Version" to project.version,
+        "Main-Class" to "com.hivemq.HiveMQServer",
+    )
+}
+
+tasks.shadowJar {
+    // INCLUDE lets the service/metadata transformers process every duplicate copy instead of silently
+    // dropping the later ones, which the default EXCLUDE does before the transformers ever run.
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    mergeServiceFiles()
+    // Several dependencies ship their own copy of these license/notice/metadata files under identical
+    // paths; INCLUDE would otherwise pack each as a duplicate jar entry. Keep the first found copy.
+    // Third-party license compliance is covered separately by src/distribution/third-party-licenses.
+    transform<PreserveFirstFoundResourceTransformer> {
+        include(
+            "about.html",
+            "LICENSE-EDL-1.0.txt",
+            "LICENSE-EPL-1.0.txt",
+            "META-INF/AL2.0",
+            "META-INF/LGPL2.1",
+            "META-INF/LICENSE",
+            "META-INF/LICENSE.md",
+            "META-INF/LICENSE.txt",
+            "META-INF/NOTICE",
+            "META-INF/NOTICE.md",
+            "META-INF/NOTICE.txt",
+            "META-INF/io.netty.versions.properties",
+            "META-INF/maven/org.jctools/jctools-core/pom.properties",
+            "META-INF/maven/org.jctools/jctools-core/pom.xml",
+            "META-INF/versions/9/OSGI-INF/MANIFEST.MF",
+        )
+    }
+}
+
+val hivemqZip by tasks.registering(Zip::class) {
+    group = "distribution"
+
+    val name = "hivemq-ce-${project.version}"
+
+    archiveFileName = "$name.zip"
+
+    from("src/distribution") {
+        exclude("**/.gitkeep")
+        filesMatching(listOf("**/*.sh", "bin/init-script/hivemq", "bin/init-script/hivemq-debian")) {
+            permissions { unix(0b111_101_101) }
+        }
+    }
+    from("src/main/resources/config.xml") { into("conf") }
+    from("src/main/resources/config.xsd") { into("conf") }
+    from(tasks.shadowJar) { into("bin").rename { "hivemq.jar" } }
+    from(tasks.named("cyclonedxDirectBom")) { into("sbom").include("bom.json", "bom.xml") }
+    into(name)
+}
+
+oci {
+    registries {
+        dockerHub {
+            optionalCredentials()
+        }
+    }
+    imageDefinitions.register("main") {
+        imageName = "hivemq/hivemq-ce"
+        allPlatforms {
+            dependencies {
+                runtime(ociImages.eclipse.temurin.oci)
+            }
+            config {
+                user = "10000"
+                ports = setOf(/* MQTT */ "1883", /* MQTT over WebSocket */ "8000")
+                environment = mapOf(
+                    "JAVA_OPTS" to "-XX:+UnlockExperimentalVMOptions -XX:+UseNUMA",
+                    "HIVEMQ_ALLOW_ALL_CLIENTS" to "true",
+                    "LANG" to "en_US.UTF-8",
+                    // As the user id that runs the container (10000 by default) does not have an entry in /etc/passwd, set the home directory explicitly.
+                    // If not set, HOME would default to "/".
+                    // Java uses this value for the system property "user.home".
+                    "HOME" to "/opt/hivemq",
+                )
+                entryPoint = listOf("/opt/docker-entrypoint.sh")
+                arguments = listOf("/opt/hivemq/bin/run.sh")
+                volumes = setOf("/opt/hivemq/data", "/opt/hivemq/log")
+                workingDirectory = "/opt/hivemq"
+            }
+            layer("main") {
+                contents {
+                    into("opt") {
+                        from("src/oci/docker-entrypoint.sh") { filePermissions = 0b111_101_101 }
+                        permissions("hivemq/", 0b111_111_101)
+                        into("hivemq") {
+                            permissions("**/*.sh", 0b111_101_101)
+                            permissions("conf/", 0b111_111_101)
+                            permissions("conf/config.xml", 0b110_110_100)
+                            permissions("conf/logback.xml", 0b110_110_100)
+                            permissions("data/", 0b111_111_101)
+                            permissions("extensions/", 0b111_111_101)
+                            permissions("extensions/*/", 0b111_111_101)
+                            permissions("extensions/*/hivemq-extension.xml", 0b110_110_100)
+                            permissions("log/", 0b111_111_101)
+                            from("src/distribution") { filter { exclude("**/.gitkeep") } }
+                            from("src/oci/config.xml") { into("conf") }
+                            from("src/main/resources/config.xsd") { into("conf") }
+                            from(tasks.shadowJar) { into("bin").rename(".*", "hivemq.jar") }
+                            from(tasks.named("cyclonedxDirectBom")) {
+                                filter { include("bom.json", "bom.xml") }
+                                into("sbom")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        specificPlatform(platform("linux", "amd64"))
+        specificPlatform(platform("linux", "arm64", "v8"))
+    }
+}
+
+tasks.javadoc {
+    doFirst {
+        // create stub element-list files for Kotlin dependencies (transitive from xodus) that don't have Javadoc on javadoc.io
+        listOf(
+            "org.jetbrains.kotlin/kotlin-stdlib/${libs.versions.kotlin.get()}",
+            "io.github.microutils/kotlin-logging/1.4.1",
+        ).forEach {
+            val dir = layout.buildDirectory.dir("tmp/javadocLinks/$it").get().asFile
+            dir.mkdirs()
+            dir.resolve("element-list").createNewFile()
+        }
+    }
+
+    (options as StandardJavadocDocletOptions).addStringOption("-html5")
+
+    include("com/hivemq/embedded/*")
+
+    val javadocCleanerResult = providers.javaexec {
+        classpath(layout.projectDirectory.file("gradle/tools/javadoc-cleaner-1.0.jar"))
+    }.result
+    doLast {
+        javadocCleanerResult.get()
+    }
+}
+
+/* ******************** checks ******************** */
+
+jacoco {
+    toolVersion = libs.versions.jacoco.get()
+}
+
+forbiddenApis {
+    bundledSignatures = setOf("jdk-system-out")
+}
+
+tasks.forbiddenApisMain {
+    exclude("**/BatchedException.class")
+    exclude("**/LoggingBootstrap.class")
+}
+
+tasks.forbiddenApisTest { enabled = false }
+
+spotless {
+    java {
+        licenseHeaderFile(rootDir.resolve("HEADER"))
+        eclipse().configFile(rootDir.resolve("eclipse-formatter.xml"))
+        endWithNewline()
+        formatAnnotations()
+        importOrder("", "javax|java", "\\#")
+        removeUnusedImports()
+        trimTrailingWhitespace()
+    }
+    format("misc") {
+        target("**/*.md", "**/*.yml", "**/*.yaml", "**/*.xml", "**/*.properties", "**/*.kts")
+        targetExclude("**/.claude/**", "**/.idea/**", "**/build/**", "eclipse-formatter.xml")
+        trimTrailingWhitespace()
+        endWithNewline()
+        leadingTabsToSpaces(4)
+    }
+}
+
+/* ******************** compliance ******************** */
+
+hivemqLicense {
+    projectName.set("HiveMQ")
+    thirdPartyLicenseDirectory.set(layout.projectDirectory.dir("src/distribution/third-party-licenses"))
+}
+
+/* ******************** publishing ******************** */
+
+publishing {
+    publications {
+        register<MavenPublication>("distribution") {
+            artifact(hivemqZip)
+            artifactId = "hivemq-community-edition"
+        }
+        register<MavenPublication>("embedded") {
+            from(components["java"])
+            artifactId = "hivemq-community-edition-embedded"
+        }
+    }
+}
+
+signing {
+    isRequired = !"true".equals(project.findProperty("signingDisabled") as String?, true)
+    val signingKey: String? by project
+    val signingPassword: String? by project
+    useInMemoryPgpKeys(signingKey, signingPassword)
+    sign(publishing.publications["embedded"])
+}
+
+githubRelease {
+    token(System.getenv("GITHUB_TOKEN"))
+    releaseAssets(hivemqZip)
+    tagName = project.version.toString()
+    allowUploadToExisting = true
+}
+
+shadow {
+    // Disable publishing `shadowRuntimeElements` as an optional variant of the `java` component.
+    // See https://github.com/GradleUp/shadow/pull/1662 (Shadow 9.1.0).
+    addShadowVariantIntoJavaComponent = false
+}

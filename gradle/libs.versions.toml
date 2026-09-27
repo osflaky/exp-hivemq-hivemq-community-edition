@@ -1,0 +1,93 @@
+[versions]
+apache-commonsCompress = "1.28.0"
+apache-commonsIO = "2.22.0"
+apache-commonsLang = "3.20.0"
+awaitility = "4.3.0"
+bouncycastle = "1.86.1"
+byteBuddy = "1.18.14"
+concurrentUnit = "0.4.6"
+dropwizard-metrics = "4.2.40"
+eclipse-collections = "12.0.0"
+equalsVerifier = "4.5.2"
+guava = "33.7.1-jre"
+guice = "5.1.0"
+hivemq-extensionSdk = "4.52.0"
+jackson = "2.22.2"
+jacoco = "0.8.15"
+javassist = "3.33.0-GA"
+javax-annotation-api = "1.3.2"
+jaxb-api = "4.0.5"
+jaxb-impl = "4.0.9"
+jctools = "4.0.7"
+junit = "4.13.2"
+kotlin = "2.4.20"
+logback = "1.6.3"
+mockito = "5.23.0"
+netty = "4.1.138.Final"
+oshi = "7.6.1"
+rocksdb = "8.3.3"
+shrinkwrap = "1.2.6"
+slf4j = "2.0.19"
+systemStubs = "2.1.8"
+wiremock = "3.13.2"
+xodus = "1.2.3"
+zeroAllocationHashing = "0.27ea1"
+
+[libraries]
+apache-commonsCompress = { module = "org.apache.commons:commons-compress", version.ref = "apache-commonsCompress" }
+apache-commonsIO = { module = "commons-io:commons-io", version.ref = "apache-commonsIO" }
+apache-commonsLang = { module = "org.apache.commons:commons-lang3", version.ref = "apache-commonsLang" }
+awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
+bouncycastle-bom = { module = "org.bouncycastle:bc-jdk18on-bom", version.ref = "bouncycastle" }
+bouncycastle-pkix = { module = "org.bouncycastle:bcpkix-jdk18on" }
+bouncycastle-prov = { module = "org.bouncycastle:bcprov-jdk18on" }
+byteBuddy = { module = "net.bytebuddy:byte-buddy", version.ref = "byteBuddy" }
+concurrentUnit = { module = "net.jodah:concurrentunit", version.ref = "concurrentUnit" }
+dropwizard-metrics = { module = "io.dropwizard.metrics:metrics-core", version.ref = "dropwizard-metrics" }
+dropwizard-metrics-jmx = { module = "io.dropwizard.metrics:metrics-jmx", version.ref = "dropwizard-metrics" }
+dropwizard-metrics-logback = { module = "io.dropwizard.metrics:metrics-logback", version.ref = "dropwizard-metrics" }
+eclipse-collections = { module = "org.eclipse.collections:eclipse-collections", version.ref = "eclipse-collections" }
+equalsVerifier = { module = "nl.jqno.equalsverifier:equalsverifier", version.ref = "equalsVerifier" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
+guice = { module = "com.google.inject:guice", version.ref = "guice" }
+hivemq-extensionSdk = { module = "com.hivemq:hivemq-extension-sdk", version.ref = "hivemq-extensionSdk" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+javassist = { module = "org.javassist:javassist", version.ref = "javassist" }
+javax-annotation-api = { module = "javax.annotation:javax.annotation-api", version.ref = "javax-annotation-api" }
+jaxb-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version.ref = "jaxb-api" }
+jaxb-impl = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jaxb-impl" }
+jctools = { module = "org.jctools:jctools-core", version.ref = "jctools" }
+julToSlf4j = { module = "org.slf4j:jul-to-slf4j", version.ref = "slf4j" }
+junit = { module = "junit:junit", version.ref = "junit" }
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+mockito = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+netty-buffer = { module = "io.netty:netty-buffer", version.ref = "netty" }
+netty-codec = { module = "io.netty:netty-codec", version.ref = "netty" }
+netty-codec-http = { module = "io.netty:netty-codec-http", version.ref = "netty" }
+netty-common = { module = "io.netty:netty-common", version.ref = "netty" }
+netty-handler = { module = "io.netty:netty-handler", version.ref = "netty" }
+netty-transport = { module = "io.netty:netty-transport", version.ref = "netty" }
+oshi = { module = "com.github.oshi:oshi-core", version.ref = "oshi" }
+rocksdb = { module = "org.rocksdb:rocksdbjni", version.ref = "rocksdb" }
+shrinkwrap-api = { module = "org.jboss.shrinkwrap:shrinkwrap-api", version.ref = "shrinkwrap" }
+shrinkwrap-impl = { module = "org.jboss.shrinkwrap:shrinkwrap-impl-base", version.ref = "shrinkwrap" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+systemStubs = { module = "uk.org.webcompere:system-stubs-core", version.ref = "systemStubs" }
+wiremock-standalone = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
+xodus-environment = { module = "org.jetbrains.xodus:xodus-environment", version.ref = "xodus" }
+xodus-openApi = { module = "org.jetbrains.xodus:xodus-openAPI", version.ref = "xodus" }
+zeroAllocationHashing = { module = "net.openhft:zero-allocation-hashing", version.ref = "zeroAllocationHashing" }
+
+[plugins]
+defaults = { id = "io.github.sgtsilvio.gradle.defaults", version = "0.3.0" }
+forbiddenApis = { id = "de.thetaphi.forbiddenapis", version = "3.11" }
+githubRelease = { id = "com.github.breadmoirai.github-release", version = "2.5.2" }
+hivemq-license = { id = "com.hivemq.tools.license", version = "1.3.6" }
+hivemq-oci-version-catalog = { id = "com.hivemq.tools.oci-version-catalog", version = "0.4.1" }
+javadocLinks = { id = "io.github.sgtsilvio.gradle.javadoc-links", version = "0.10.0" }
+metadata = { id = "io.github.sgtsilvio.gradle.metadata", version = "0.7.0" }
+mavenCentralPublishing = { id = "io.github.sgtsilvio.gradle.maven-central-publishing", version = "0.5.0" }
+oci = { id = "io.github.sgtsilvio.gradle.oci", version = "0.30.0" }
+shadow = { id = "com.gradleup.shadow", version = "9.6.1" }
+spotless = { id = "com.diffplug.spotless", version = "8.10.2" }
